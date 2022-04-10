@@ -1,4 +1,5 @@
 import { HashConnect, HashConnectTypes, MessageTypes } from "hashconnect";
+import { AccountInfoQuery, Client, PublicKey, Transaction } from '@hashgraph/sdk';
 import React, { useEffect, useState } from "react";
 
 //Type declarations
@@ -24,6 +25,7 @@ interface PropsType {
 }
 
 export interface HashConnectProviderAPI {
+  authenticate: (accountId: string) => void;
   connect: () => void;
   walletData: SaveData;
   netWork: Networks;
@@ -57,6 +59,7 @@ const loadLocalData = (): null | SaveData => {
 
 export const HashConnectAPIContext =
   React.createContext<HashConnectProviderAPI>({
+    authenticate: (accountId: string) => null,
     connect: () => null,
     walletData: INITIAL_SAVE_DATA,
     netWork: "testnet",
@@ -133,16 +136,7 @@ export default function HashConnectProvider({
     localStorage.setItem("hashconnectData", dataToSave);
   };
 
-  const additionalAccountResponseEventHandler = (
-    data: MessageTypes.AdditionalAccountResponse
-  ) => {
-    if (debug) console.debug("=====additionalAccountResponseEvent======", data);
-    // Do a thing
-  };
-
-  const foundExtensionEventHandler = (
-    data: HashConnectTypes.WalletMetadata
-  ) => {
+  const foundExtensionEventHandler = (data: HashConnectTypes.WalletMetadata) => {
     if (debug) console.debug("====foundExtensionEvent====", data);
     // Do a thing
     setInstalledExtensions(data);
@@ -159,17 +153,11 @@ export default function HashConnectProvider({
     initializeHashConnect();
 
     // Attach event handlers
-    hashConnect.additionalAccountResponseEvent.on(
-      additionalAccountResponseEventHandler
-    );
     hashConnect.foundExtensionEvent.on(foundExtensionEventHandler);
     hashConnect.pairingEvent.on(pairingEventHandler);
 
     return () => {
       // Detach existing handlers
-      hashConnect.additionalAccountResponseEvent.off(
-        additionalAccountResponseEventHandler
-      );
       hashConnect.foundExtensionEvent.off(foundExtensionEventHandler);
       hashConnect.pairingEvent.off(pairingEventHandler);
     };
@@ -185,9 +173,45 @@ export default function HashConnectProvider({
     }
   };
 
+  const authenticate = async (accountId: string) => {
+    let res = await hashConnect.authenticate(saveData.topic, accountId);
+
+    if(!res.success) {
+      console.log("====Authentication failed====");
+      //user rejected authentication request
+      return;
+    }
+
+    //FOLLOWING IS EXAMPLE ONLY
+    //!!!!!!!!!! DO NOT DO THIS ON THE CLIENT SIDE - YOU MUST PASS THE TRANSACTION BYTES TO THE SERVER AND VERIFY THERE
+    // after verified on the server, generate some sort of auth token to use with your backend
+
+    let trans = Transaction.fromBytes(res.signedTransaction as Uint8Array);
+
+    let url = "https://testnet.mirrornode.hedera.com/api/v1/accounts/" + accountId;
+
+    fetch(url, { method: "GET"}).then(async res => {
+      if (res.ok) {
+        let data = await res.json();
+        console.log("Got account info")
+        console.log("====Account Data====", data);
+
+        let pubKey = PublicKey.fromString(data.key.key);
+        console.log("====Public Key====", pubKey);
+        let authenticated = pubKey.verifyTransaction(trans as Transaction)
+        console.log("authenticated: ", authenticated)
+        //if authenticated is true, do your token generation
+      } else {
+        alert("Error getting public key");
+      }
+    })
+    //!!!!!!!!!! DO NOT DO THIS ON THE CLIENT SIDE - YOU MUST PASS THE TRANSACTION BYTES TO THE SERVER AND VERIFY THERE
+
+  }
+
   return (
     <HashConnectAPIContext.Provider
-      value={{ connect, walletData: saveData, netWork, installedExtensions }}
+      value={{ authenticate, connect, walletData: saveData, netWork, installedExtensions }}
     >
       {children}
     </HashConnectAPIContext.Provider>
@@ -195,7 +219,11 @@ export default function HashConnectProvider({
 }
 
 const defaultProps: Partial<PropsType> = {
-  metaData: APP_CONFIG,
+  metaData: {
+    name: "Hedera Notification Service",
+    description: "A communication layer connecting Web3 back to Web2, enabling DApps and smart contracts to notify users regarding important on-chain changes.",
+    icon: "https://absolute.url/to/icon.png",
+  },
   netWork: "testnet",
   debug: false,
 };

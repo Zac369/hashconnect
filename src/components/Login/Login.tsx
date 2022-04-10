@@ -2,8 +2,8 @@ import React from "react";
 import { useHashConnect } from "../../HashConnectAPIProvider"
 
 const Login = () => {
-  const { connect, walletData, installedExtensions } = useHashConnect();
-  const { accountIds, netWork, id } = walletData;
+  const { authenticate, connect, walletData, netWork, installedExtensions } = useHashConnect();
+  const { accountIds, id } = walletData;
 
   const conCatAccounts = (lastAccs: string, Acc: string) => {
     return lastAccs + " " + Acc;
@@ -21,14 +21,23 @@ const Login = () => {
       );
   };
 
+  const handleAuth = () => {
+    if (accountIds) {
+      authenticate(accountIds[0]);
+    } else {
+      alert("Please connect to wallet first.");
+    }
+  }
+
   return (
       <div className="grid place-items-center">
           <button className="text-2xl flex my-5 bg-gray-500 rounded-md p-2 hover:text-white" onClick={handleClick}>Login With HashPack</button>
+          <button className="text-2xl flex my-5 bg-gray-500 rounded-md p-2 hover:text-white" onClick={handleAuth}>Authenticate</button>
 
           {accountIds && accountIds?.length > 0 && (
           <div>
             <h3>Connected Accounts Details:</h3>
-            <p>Network:{netWork}</p>
+            <p>Network: {netWork}</p>
             <p>Accounts: [{accountIds.reduce(conCatAccounts)}]</p>
           </div>
         )}
