@@ -2,6 +2,7 @@
   "name": "hashconnect",
   "version": "0.1.0",
   "private": true,
+  "proxy": "http://localhost:5000/",
   "dependencies": {
     "@hashgraph/sdk": "^2.12.1",
     "@testing-library/jest-dom": "^5.14.1",
@@ -11,7 +12,7 @@
     "@types/node": "^16.7.13",
     "@types/react": "^17.0.20",
     "@types/react-dom": "^17.0.9",
-    "hashconnect": "^0.1.2",
+    "hashconnect": "^0.1.4",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "react-router-dom": "^6.3.0",
@@ -25,7 +26,9 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d build"
+    "deploy": "gh-pages -d build",
+    "server": "nodemon server.js",
+    "dev": "concurrently --kill-others-on-fail \"yarn server\" \"yarn start\""
   },
   "eslintConfig": {
     "extends": [
